@@ -50,7 +50,11 @@ export async function handleCompletion(c: Context) {
 
   // Claude Code represents 1m models differently (e.g. claude-sonnet-4-... -> replaced, but original payload has it)
   // Or explicitly checking if user asked for a big context model.
-  const isExtendedModel = anthropicPayload.model.includes("-1m")
+  // Additionally, Anthropic API uses the `anthropic-beta: context-1m-2025-08-07` header to opt-in to 1M context.
+  const anthropicBeta = c.req.header("anthropic-beta") || ""
+  const isExtendedModel =
+    anthropicPayload.model.includes("-1m") ||
+    anthropicBeta.includes("context-1m")
 
   const useFallback =
     state.fallbackAnthropicBaseUrl
