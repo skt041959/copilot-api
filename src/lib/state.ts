@@ -15,6 +15,10 @@ export interface State {
   // Rate limiting configuration
   rateLimitSeconds?: number
   lastRequestTimestamp?: number
+
+  // Fallback Anthropic API configuration
+  fallbackAnthropicBaseUrl?: string
+  fallbackAnthropicApiKey?: string
 }
 
 export const state: State = {

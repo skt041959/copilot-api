@@ -6,6 +6,7 @@ import { streamSSE } from "hono/streaming"
 import { awaitApproval } from "~/lib/approval"
 import { checkRateLimit } from "~/lib/rate-limit"
 import { state } from "~/lib/state"
+import { getTokenCount } from "~/lib/tokenizer"
 import {
   createChatCompletions,
   type ChatCompletionChunk,
@@ -16,6 +17,7 @@ import {
   type AnthropicMessagesPayload,
   type AnthropicStreamState,
 } from "./anthropic-types"
+import { handleFallbackAnthropicCompletion } from "./fallback-handler"
 import {
   translateToAnthropic,
   translateToOpenAI,
@@ -33,6 +35,34 @@ export async function handleCompletion(c: Context) {
     "Translated OpenAI request payload:",
     JSON.stringify(openAIPayload),
   )
+
+  const selectedModel = state.models?.data.find(
+    (model) => model.id === openAIPayload.model,
+  )
+
+  let exceedsTokenLimit = false
+  if (selectedModel) {
+    const tokenCount = await getTokenCount(openAIPayload, selectedModel)
+    if (tokenCount.input > 200000) {
+      exceedsTokenLimit = true
+    }
+  }
+
+  // Claude Code represents 1m models differently (e.g. claude-sonnet-4-... -> replaced, but original payload has it)
+  // Or explicitly checking if user asked for a big context model.
+  const isExtendedModel = anthropicPayload.model.includes("-1m")
+
+  const useFallback =
+    state.fallbackAnthropicBaseUrl
+    && state.fallbackAnthropicApiKey
+    && (isExtendedModel || exceedsTokenLimit)
+
+  if (useFallback) {
+    return handleFallbackAnthropicCompletion(c, anthropicPayload, {
+      baseUrl: state.fallbackAnthropicBaseUrl as string,
+      apiKey: state.fallbackAnthropicApiKey as string,
+    })
+  }
 
   if (state.manualApprove) {
     await awaitApproval()

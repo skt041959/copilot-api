@@ -25,6 +25,8 @@ interface RunServerOptions {
   claudeCode: boolean
   showToken: boolean
   proxyEnv: boolean
+  fallbackAnthropicUrl?: string
+  fallbackAnthropicKey?: string
 }
 
 export async function runServer(options: RunServerOptions): Promise<void> {
@@ -46,6 +48,8 @@ export async function runServer(options: RunServerOptions): Promise<void> {
   state.rateLimitSeconds = options.rateLimit
   state.rateLimitWait = options.rateLimitWait
   state.showToken = options.showToken
+  state.fallbackAnthropicBaseUrl = options.fallbackAnthropicUrl
+  state.fallbackAnthropicApiKey = options.fallbackAnthropicKey
 
   await ensurePaths()
   await cacheVSCodeVersion()
@@ -184,6 +188,14 @@ export const start = defineCommand({
       default: false,
       description: "Initialize proxy from environment variables",
     },
+    "fallback-anthropic-url": {
+      type: "string",
+      description: "Fallback Anthropic API Base URL for large context requests",
+    },
+    "fallback-anthropic-key": {
+      type: "string",
+      description: "Fallback Anthropic API Key for large context requests",
+    },
   },
   run({ args }) {
     const rateLimitRaw = args["rate-limit"]
@@ -202,6 +214,8 @@ export const start = defineCommand({
       claudeCode: args["claude-code"],
       showToken: args["show-token"],
       proxyEnv: args["proxy-env"],
+      fallbackAnthropicUrl: args["fallback-anthropic-url"],
+      fallbackAnthropicKey: args["fallback-anthropic-key"],
     })
   },
 })
